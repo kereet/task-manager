@@ -1,18 +1,23 @@
 DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    completed BOOLEAN DEFAULT FALSE, 
+    completed BOOLEAN DEFAULT FALSE,
+    owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO tasks 
-    (title, description, completed) 
-    VALUES 
-    ('Задача 1', 'описание', true),
-    ('Задача 2', 'описание', false),
-    ('Задача 3', 'описание', false);
-
+CREATE INDEX idx_tasks_owner_id ON tasks(owner_id);
+CREATE INDEX idx_users_email ON users(email);

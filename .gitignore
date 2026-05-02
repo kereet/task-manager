@@ -1,1 +1,7 @@
+*.pid
+Dockerfile
+!.dockerignore
+
 /main
+
+.env

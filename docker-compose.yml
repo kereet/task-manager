@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   postgres:
@@ -9,10 +8,36 @@ services:
       POSTGRES_USER: taskuser
       POSTGRES_PASSWORD: taskpass
     ports:
-      - "5432:5432"  
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data 
+      - postgres_data:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - task-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskuser -d tasksdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: tasks_app
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://taskuser:taskpass@postgres:5432/tasksdb?sslmode=disable
+      SERVER_PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - task-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  task-network:
+    driver: bridge

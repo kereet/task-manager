@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"task-manager/internal/auth"
 	"task-manager/internal/database"
 	"task-manager/internal/handlers"
 )
@@ -17,25 +18,28 @@ func main() {
 	if serverPort == "" {
 		serverPort = "8080"
 	}
-
-	log.Printf("Начинаем запуск сервера %s", serverPort)
+	log.Printf("Starting server on port %s", serverPort)
 	db, err := database.Connect(databaseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	log.Println("Успешно подключено к бд")
+	log.Printf("Connected to database")
 
 	taskStore := database.NewTaskStore(db)
+	userStore := database.NewUserStore(db)
 
-	handler := handlers.NewHandlers(taskStore)
+	taskHandler := handlers.NewHandlers(taskStore)
+	authHandler := handlers.NewAuthHandlers(userStore)
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/tasks", methodHandler(handler.GetAllTasks, http.MethodGet))
-	mux.HandleFunc("/tasks/create", methodHandler(handler.CreateTask, http.MethodPost))
+	mux.HandleFunc("/api/register", methodHandler(authHandler.Register, http.MethodPost))
+	mux.HandleFunc("/api/login", methodHandler(authHandler.Login, http.MethodPost))
 
-	mux.HandleFunc("/tasks/", taskIDHandler(handler))
+	mux.HandleFunc("/tasks", authMiddleware(methodHandler(taskHandler.GetAllTasks, http.MethodGet)))
+	mux.HandleFunc("/tasks/create", authMiddleware(methodHandler(taskHandler.CreateTask, http.MethodPost)))
+	mux.HandleFunc("/tasks/", authMiddleware(taskIDHandler(taskHandler)))
 
 	loggedMux := loggingMiddleware(mux)
 	serverAddr := ":" + serverPort
@@ -47,10 +51,35 @@ func main() {
 	}
 }
 
-func methodHandler(handlerFunc http.HandlerFunc, allowedMethond string) http.HandlerFunc {
+func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != allowedMethond {
+		token := r.Header.Get("Authorization")
+		if token == "" {
+			http.Error(w, "Unauthorized: missing token", http.StatusUnauthorized)
+			return
+		}
+
+		if len(token) > 7 && token[:7] == "Bearer " {
+			token = token[7:]
+		}
+
+		claims, err := auth.ValidateToken(token)
+		if err != nil {
+			http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		r.Header.Set("X-User-ID", string(rune(claims.UserID)))
+
+		next(w, r)
+	}
+}
+
+func methodHandler(handlerFunc http.HandlerFunc, allowedMethod string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != allowedMethod {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
 		}
 		handlerFunc(w, r)
 	}
