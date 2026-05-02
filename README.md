@@ -33,4 +33,5 @@ A RESTful API for managing tasks built with Go and PostgreSQL.
 ├── .dockerignore             # Files excluded from Docker image
 ├── go.mod
 ├── go.sum
-└── README.md```
+└── README.md
+```
