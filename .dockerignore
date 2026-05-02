@@ -1,31 +1,13 @@
-# Git
-.git/
+.git
 .gitignore
-
-# Docker
-Dockerfile
-docker-compose.yml
-.dockerignore
-
-# IDE
-.idea/
-.vscode/
-*.swp
-
-# Logs
-*.log
-
-# Binaries
-main
-*.exe
-
-# Environment
 .env
 .env.local
-
-# Documentation
+.idea
+.vscode
+*.log
+*.exe
+Dockerfile
+docker-compose.yml
 README.md
-
-# OS
-.DS_Store
-Thumbs.db
+tmp/
+bin/

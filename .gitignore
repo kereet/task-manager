@@ -1,7 +1,3 @@
-*.pid
-Dockerfile
-!.dockerignore
-
 /main
-
+.idea
 .env
